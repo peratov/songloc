@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import json
 import os
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -23,6 +24,29 @@ DB_PATH = DATA_DIR / "songloc.db"
 
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 WORK_DIR.mkdir(parents=True, exist_ok=True)
+
+
+def _add_venv_scripts_to_path() -> None:
+    """Make console scripts in this interpreter's environment discoverable.
+
+    Several providers shell out to tools installed alongside us -- demucs,
+    whisperx -- and locate them with shutil.which(). Running the server as
+    `.venv/Scripts/python.exe -m uvicorn ...` does not put that Scripts
+    directory on PATH the way activating the venv does, so which() returns None
+    and the provider reports the tool as not installed when it is sitting right
+    next to the interpreter. Prepending it here makes the lookup independent of
+    how the server was launched.
+    """
+    scripts = Path(sys.prefix) / ("Scripts" if os.name == "nt" else "bin")
+    if not scripts.is_dir():
+        return
+    current = os.environ.get("PATH", "")
+    if str(scripts) in current.split(os.pathsep):
+        return
+    os.environ["PATH"] = str(scripts) + os.pathsep + current
+
+
+_add_venv_scripts_to_path()
 
 
 def _load_dotenv() -> None:
