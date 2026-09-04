@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>songloc</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#E4E7EA; --panel:#FCFCFD; --ink:#131A22; --mid:#5A6570;
+  --rule:#C6CCD2; --beat:#17605C; --miss:#8E2F4A; --hold:#A8700B;
+  --radius:3px;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0; background:var(--paper); color:var(--ink);
+  font:400 15px/1.55 Archivo, system-ui, sans-serif;
+}
+a{color:var(--beat)}
+h1,h2,h3{font-weight:600; letter-spacing:-0.01em; margin:0}
+h1{font-size:19px; font-stretch:112%}
+h2{font-size:16px; margin-bottom:10px}
+h3{font-size:13px; color:var(--mid); font-weight:500; margin-bottom:6px}
+p{margin:0 0 10px}
+.muted{color:var(--mid); font-size:13px}
+
+header{
+  display:flex; align-items:baseline; gap:16px; flex-wrap:wrap;
+  padding:14px 22px; border-bottom:1px solid var(--rule); background:var(--panel);
+  position:sticky; top:0; z-index:20;
+}
+header .tag{font:400 13px/1 Archivo,sans-serif; color:var(--mid)}
+header nav{margin-left:auto; display:flex; gap:4px}
+
+button{
+  font:500 13px/1 Archivo,sans-serif; padding:8px 13px; cursor:pointer;
+  border:1px solid var(--rule); background:var(--panel); color:var(--ink);
+  border-radius:var(--radius);
+}
+button:hover{border-color:var(--ink)}
+button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible{
+  outline:2px solid var(--beat); outline-offset:1px
+}
+button.primary{background:var(--ink); color:var(--panel); border-color:var(--ink)}
+button.primary:hover{background:var(--beat); border-color:var(--beat)}
+button.on{background:var(--ink); color:var(--panel); border-color:var(--ink)}
+button[disabled]{opacity:.45; cursor:not-allowed}
+
+input,select,textarea{
+  font:400 14px/1.4 Archivo,sans-serif; width:100%; padding:8px 10px;
+  border:1px solid var(--rule); border-radius:var(--radius);
+  background:var(--panel); color:var(--ink);
+}
+textarea{resize:vertical; min-height:70px}
+label{display:block; font-size:12px; color:var(--mid); margin-bottom:4px}
+.field{margin-bottom:12px}
+.row{display:flex; gap:10px; flex-wrap:wrap}
+.row > *{flex:1 1 180px}
+
+main{padding:20px 22px 60px; max-width:1080px; margin:0 auto}
+.view{display:none}
+.view.active{display:block}
+.card{
+  background:var(--panel); border:1px solid var(--rule);
+  border-radius:var(--radius); padding:16px; margin-bottom:14px;
+}
+
+/* ---- the review grid: a lyric line measured against its beats ---- */
+.line{border-bottom:1px solid var(--rule); padding:14px 0}
+.line:last-child{border-bottom:0}
+.line-head{display:flex; align-items:flex-end; gap:14px; margin-bottom:9px}
+.line-no{font:500 11px/1.9 "IBM Plex Mono",monospace; color:var(--mid); min-width:26px}
+.beats{
+  display:flex; gap:5px; align-items:flex-end; height:26px;
+  border-bottom:1px solid var(--rule); padding:0 2px;
+}
+.beat{width:3px; height:9px; background:var(--rule)}
+.beat.strong{width:5px; height:22px; background:var(--beat)}
+.beat.extra{height:22px; width:5px; background:var(--miss)}
+.beat.short{height:9px; background:transparent; border-left:1px dashed var(--miss); width:3px}
+.count{
+  font:500 12px/1 "IBM Plex Mono",monospace; margin-left:auto; color:var(--mid);
+  white-space:nowrap;
+}
+.count.bad{color:var(--miss)}
+.count.good{color:var(--beat)}
+.source-line{color:var(--mid); font-size:13.5px; margin:0 0 6px 38px}
+.line input{margin-left:38px; width:calc(100% - 38px); font-size:15px}
+.issues{margin:6px 0 0 38px; font-size:12.5px; color:var(--miss)}
+.rhyme{font:500 10px/1 "IBM Plex Mono",monospace; color:var(--panel); background:var(--hold); padding:3px 5px; border-radius:2px; margin-bottom:3px}
+
+/* ---- lists ---- */
+table{width:100%; border-collapse:collapse; font-size:13.5px}
+th{text-align:left; font-weight:500; color:var(--mid); font-size:12px; padding:6px 8px 6px 0}
+td{padding:8px 8px 8px 0; border-top:1px solid var(--rule); vertical-align:top}
+tr.pick{cursor:pointer}
+tr.pick:hover td{background:#F1F3F5}
+.state{font:500 11px/1 "IBM Plex Mono",monospace; padding:3px 6px; border-radius:2px; background:var(--paper); color:var(--mid)}
+.state.done{background:var(--beat); color:var(--panel)}
+.state.failed,.state.blocked{background:var(--miss); color:var(--panel)}
+.state.awaiting_review,.state.awaiting_asset{background:var(--hold); color:var(--panel)}
+.state.running{background:var(--ink); color:var(--panel)}
+
+.cred{display:grid; grid-template-columns:1fr 1.4fr; gap:10px 14px; align-items:center; padding:9px 0; border-top:1px solid var(--rule)}
+.cred:first-of-type{border-top:0}
+.cred b{font-weight:500; font-size:13.5px}
+.cred small{display:block; color:var(--mid); font-size:11.5px; font-family:"IBM Plex Mono",monospace}
+.dot{display:inline-block; width:6px; height:6px; border-radius:50%; background:var(--rule); margin-right:6px}
+.dot.set{background:var(--beat)}
+
+.log{font:400 12px/1.6 "IBM Plex Mono",monospace; max-height:220px; overflow:auto; color:var(--mid)}
+.log .error{color:var(--miss)}
+.log .warn{color:var(--hold)}
+.notice{border-left:3px solid var(--hold); padding:9px 12px; background:#FFFCF5; font-size:13.5px; margin-bottom:12px}
+.files a{display:inline-block; margin:0 12px 6px 0; font-size:13px}
+@media (max-width:620px){
+  .cred{grid-template-columns:1fr}
+  main{padding:16px 14px 50px}
+  header{padding:12px 14px}
+}
+@media (prefers-reduced-motion:no-preference){
+  .card{transition:border-color .15s}
+}
+</style>
+</head>
+<body>
+<header>
+  <h1>songloc</h1>
+  <span class="tag" id="tag">connecting…</span>
+  <nav>
+    <button data-view="jobs" class="on">Jobs</button>
+    <button data-view="new">New job</button>
+    <button data-view="keys">Connections</button>
+  </nav>
+</header>
+
+<main>
+  <!-- Jobs ------------------------------------------------------------ -->
+  <section id="v-jobs" class="view active">
+    <div class="card">
+      <h2>Jobs</h2>
+      <table id="jobs-table"><tbody></tbody></table>
+      <p class="muted" id="jobs-empty" hidden>No jobs yet. Start one from “New job”.</p>
+    </div>
+    <div id="detail"></div>
+  </section>
+
+  <!-- New job --------------------------------------------------------- -->
+  <section id="v-new" class="view">
+    <div class="card">
+      <h2>Start a localisation</h2>
+      <div class="field"><label for="f-title">Song</label><input id="f-title" placeholder="Track title"></div>
+      <div class="row">
+        <div class="field"><label for="f-src">Sung in</label><input id="f-src" value="en" placeholder="en"></div>
+        <div class="field"><label for="f-tgt">Localise into</label><input id="f-tgt" value="es" placeholder="es, pt, ja"></div>
+      </div>
+      <div class="field">
+        <label for="f-instr">Direction for the adaptation</label>
+        <textarea id="f-instr" placeholder="Keep the harbour imagery. Register is conversational, not literary. The word “stay” should stay on the downbeat of every chorus."></textarea>
+      </div>
+      <div class="field">
+        <label for="f-audio">Master or vocal stem</label>
+        <input type="file" id="f-audio" accept="audio/*">
+      </div>
+      <div class="field">
+        <label><input type="checkbox" id="f-review" checked style="width:auto;margin-right:7px">
+        Hold each language for approval before rendering a vocal</label>
+      </div>
+      <h3>Providers</h3>
+      <div id="stage-picks"></div>
+      <div id="stage-options"></div>
+      <button class="primary" id="f-create">Create and run</button>
+      <span class="muted" id="f-status"></span>
+    </div>
+  </section>
+
+  <!-- Connections ----------------------------------------------------- -->
+  <section id="v-keys" class="view">
+    <div class="card">
+      <h2>Connections</h2>
+      <p class="muted">Keys are stored in <code>data/credentials.json</code> on this machine, permissions 600, and are never sent back to the browser in full. Anything already set in <code>.env</code> shows as environment.</p>
+      <div id="creds"></div>
+      <button class="primary" id="save-keys">Save keys</button>
+      <span class="muted" id="keys-status"></span>
+    </div>
+    <div class="card">
+      <h2>Available providers</h2>
+      <div id="prov-list"></div>
+    </div>
+  </section>
+</main>
+
+<script>
+const api = async (path, opts = {}) => {
+  const r = await fetch(path, opts);
+  if (!r.ok) throw new Error((await r.text()).slice(0, 300));
+  return r.status === 204 ? null : r.json();
+};
+const el = (t, cls, txt) => { const n = document.createElement(t); if (cls) n.className = cls; if (txt != null) n.textContent = txt; return n; };
+const esc = s => (s ?? '').toString().replace(/[<>&]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));
+
+let CATALOGUE = {}, CURRENT = null, POLL = null;
+const STAGE_LABEL = {
+  separate: 'Split the master', transcribe: 'Get timed lyrics',
+  adapt: 'Write singable lyrics', voice: 'Produce the vocal', mix: 'Place it on the bed'
+};
+
+/* ---- navigation ---- */
+document.querySelectorAll('header nav button').forEach(b => b.onclick = () => {
+  document.querySelectorAll('header nav button').forEach(x => x.classList.toggle('on', x === b));
+  document.querySelectorAll('.view').forEach(v => v.classList.toggle('active', v.id === 'v-' + b.dataset.view));
+});
+
+/* ---- boot ---- */
+async function boot() {
+  const h = await api('/health');
+  const total = Object.values(h.providers).reduce((a, b) => a + b, 0);
+  document.getElementById('tag').textContent = `${total} providers · review ${h.review_required_by_default ? 'on' : 'off'}`;
+  CATALOGUE = await api('/providers');
+  renderStagePicks();
+  renderProviderList();
+  loadCreds();
+  loadJobs();
+}
+
+/* ---- credentials ---- */
+async function loadCreds() {
+  const { credentials } = await api('/credentials');
+  const box = document.getElementById('creds');
+  box.innerHTML = '';
+  credentials.forEach(c => {
+    const row = el('div', 'cred');
+    const left = el('div');
+    left.innerHTML = `<b><span class="dot ${c.configured ? 'set' : ''}"></span>${esc(c.label)}</b>
+      <small>${esc(c.name)} · ${esc(c.used_by.join(', '))}</small>`;
+    const input = el('input');
+    input.dataset.name = c.name;
+    input.type = 'password';
+    input.placeholder = c.configured ? `${c.preview} (set via ${c.source})` : 'not set';
+    input.autocomplete = 'off';
+    row.append(left, input);
+    box.append(row);
+  });
+}
+
+document.getElementById('save-keys').onclick = async () => {
+  const values = {};
+  document.querySelectorAll('#creds input').forEach(i => { if (i.value.trim()) values[i.dataset.name] = i.value.trim(); });
+  if (!Object.keys(values).length) return setText('keys-status', 'Nothing to save.');
+  await api('/credentials', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ values }) });
+  setText('keys-status', `Saved ${Object.keys(values).length}.`);
+  loadCreds(); CATALOGUE = await api('/providers'); renderStagePicks(); renderProviderList();
+};
+
+function renderProviderList() {
+  const box = document.getElementById('prov-list');
+  box.innerHTML = '';
+  Object.entries(CATALOGUE).forEach(([stage, provs]) => {
+    box.append(el('h3', null, STAGE_LABEL[stage] || stage));
+    const t = el('table'), tb = el('tbody');
+    provs.forEach(p => {
+      const tr = el('tr');
+      tr.innerHTML = `<td style="width:30%"><b>${esc(p.label)}</b><br>
+          <span class="muted">${esc(p.id)} · ${esc(p.kind)}</span></td>
+        <td>${esc(p.notes)} ${p.docs ? `<a href="${esc(p.docs)}" target="_blank" rel="noopener">docs</a>` : ''}</td>
+        <td style="width:90px"><span class="state ${p.configured ? 'done' : ''}">${p.credentials.length ? (p.configured ? 'ready' : 'needs key') : 'ready'}</span></td>`;
+      tb.append(tr);
+    });
+    t.append(tb); box.append(t);
+  });
+}
+
+/* ---- new job ---- */
+function renderStagePicks() {
+  const box = document.getElementById('stage-picks');
+  box.innerHTML = '';
+  const row = el('div', 'row');
+  Object.entries(CATALOGUE).forEach(([stage, provs]) => {
+    const f = el('div', 'field');
+    f.append(el('label', null, STAGE_LABEL[stage] || stage));
+    const s = el('select'); s.dataset.stage = stage;
+    provs.forEach(p => {
+      const o = el('option', null, p.label + (p.credentials.length && !p.configured ? ' — needs key' : ''));
+      o.value = p.id; s.append(o);
+    });
+    s.onchange = renderStageOptions;
+    f.append(s); row.append(f);
+  });
+  box.append(row);
+  renderStageOptions();
+}
+
+function renderStageOptions() {
+  const box = document.getElementById('stage-options');
+  box.innerHTML = '';
+  document.querySelectorAll('#stage-picks select').forEach(s => {
+    const p = (CATALOGUE[s.dataset.stage] || []).find(x => x.id === s.value);
+    if (!p || !p.options.length) return;
+    (p.options || []).forEach(o => {
+      const f = el('div', 'field');
+      f.append(el('label', null, `${STAGE_LABEL[s.dataset.stage]} · ${o.label}`));
+      let input;
+      if (o.choices) {
+        input = el('select');
+        o.choices.forEach(c => { const opt = el('option', null, c); opt.value = c; input.append(opt); });
+      } else if (o.name === 'lyrics' || o.name === 'lines') {
+        input = el('textarea');
+      } else {
+        input = el('input');
+      }
+      input.value = o.default ?? '';
+      if (o.help) input.title = o.help;
+      input.dataset.stage = s.dataset.stage; input.dataset.opt = o.name;
+      f.append(input);
+      if (o.help) f.append(el('div', 'muted', o.help));
+      box.append(f);
+    });
+  });
+}
+
+document.getElementById('f-create').onclick = async () => {
+  const stages = {};
+  document.querySelectorAll('#stage-picks select').forEach(s => stages[s.dataset.stage] = { provider: s.value, options: {} });
+  document.querySelectorAll('#stage-options [data-opt]').forEach(i => {
+    if (i.value !== '') stages[i.dataset.stage].options[i.dataset.opt] = i.value;
+  });
+  const body = {
+    title: document.getElementById('f-title').value || 'untitled',
+    source_lang: document.getElementById('f-src').value.trim() || null,
+    target_langs: document.getElementById('f-tgt').value.split(',').map(s => s.trim()).filter(Boolean),
+    instructions: document.getElementById('f-instr').value,
+    require_review: document.getElementById('f-review').checked,
+    stages
+  };
+  try {
+    setText('f-status', 'Creating…');
+    const job = await api('/jobs', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    const file = document.getElementById('f-audio').files[0];
+    if (file) {
+      const fd = new FormData(); fd.append('role', 'source'); fd.append('file', file);
+      setText('f-status', 'Uploading…');
+      await api(`/jobs/${job.id}/assets`, { method: 'POST', body: fd });
+    }
+    await api(`/jobs/${job.id}/run`, { method: 'POST' });
+    setText('f-status', '');
+    document.querySelector('header nav button[data-view="jobs"]').click();
+    openJob(job.id);
+  } catch (e) { setText('f-status', 'Failed: ' + e.message); }
+};
+
+/* ---- jobs ---- */
+async function loadJobs() {
+  const { jobs } = await api('/jobs');
+  const tb = document.querySelector('#jobs-table tbody');
+  tb.innerHTML = '';
+  document.getElementById('jobs-empty').hidden = jobs.length > 0;
+  jobs.forEach(j => {
+    const tr = el('tr', 'pick');
+    tr.innerHTML = `<td><b>${esc(j.title)}</b><br><span class="muted">${esc(j.id)}</span></td>
+      <td>${esc(j.source_lang || '?')} → ${esc(j.target_langs.join(', '))}</td>
+      <td>${j.lines ?? '—'} lines</td>
+      <td><span class="state ${esc(j.status)}">${esc(j.status)}</span></td>`;
+    tr.onclick = () => openJob(j.id);
+    tb.append(tr);
+  });
+}
+
+async function openJob(id) {
+  CURRENT = id;
+  await renderJob();
+  clearInterval(POLL);
+  POLL = setInterval(async () => {
+    const j = await api('/jobs/' + id);
+    if (['running', 'created'].includes(j.status)) renderJob(j); else { clearInterval(POLL); renderJob(j); loadJobs(); }
+  }, 2500);
+}
+
+async function renderJob(job) {
+  job = job || await api('/jobs/' + CURRENT);
+  const box = document.getElementById('detail');
+  box.innerHTML = '';
+
+  const head = el('div', 'card');
+  head.innerHTML = `<h2>${esc(job.title)} <span class="state ${esc(job.status)}">${esc(job.status)}</span></h2>
+    <p class="muted">${esc(job.source_lang || '?')} → ${esc((job.target_langs || []).join(', '))} ·
+      ${job.analysis ? job.analysis.line_count + ' lines, ' + job.analysis.total_syllables + ' syllables' : 'not analysed'}</p>`;
+  if (job.waiting_on) head.append(Object.assign(el('div', 'notice'), { textContent: job.waiting_on.message }));
+  if (job.error) head.append(Object.assign(el('div', 'notice'), { textContent: job.error }));
+  const run = el('button', 'primary', 'Run'); run.onclick = async () => { await api(`/jobs/${job.id}/run`, { method: 'POST' }); openJob(job.id); };
+  head.append(run);
+  box.append(head);
+
+  for (const [lang, r] of Object.entries(job.renders || {})) {
+    box.append(await renderPanel(job, lang, r));
+  }
+
+  const files = await api(`/jobs/${job.id}/files`).catch(() => ({ files: [] }));
+  if (files.files.length) {
+    const c = el('div', 'card');
+    c.append(el('h2', null, 'Files'));
+    const wrap = el('div', 'files');
+    files.files.forEach(f => {
+      const a = el('a', null, `${f.name} · ${(f.bytes / 1024).toFixed(0)} kB`);
+      a.href = f.url; a.download = ''; wrap.append(a);
+    });
+    c.append(wrap); box.append(c);
+  }
+
+  const lc = el('div', 'card');
+  lc.append(el('h2', null, 'Log'));
+  const log = el('div', 'log');
+  (job.log || []).slice(-60).forEach(e => log.append(el('div', e.level, `${e.at.slice(11, 19)}  ${e.message}`)));
+  lc.append(log); box.append(lc);
+  log.scrollTop = log.scrollHeight;
+}
+
+/* The review grid. Each line shows the melody's syllable slots as beats:
+   filled large = a strong beat the lyric must stress, small = ordinary slot,
+   red = syllables the candidate adds beyond the melody. */
+async function renderPanel(job, lang, render) {
+  const card = el('div', 'card');
+  card.append(el('h2', null, `${lang} · ${render.status}${render.mean_fit != null ? ` · mean fit ${render.mean_fit}` : ''}`));
+  if (render.error) card.append(Object.assign(el('div', 'notice'), { textContent: render.error }));
+  if (!render.lines) { card.append(el('p', 'muted', 'No adaptation yet.')); return card; }
+
+  const data = await api(`/jobs/${job.id}/renders/${lang}`);
+  const wrap = el('div');
+  data.lines.forEach(ln => {
+    const fit = ln.fit || {};
+    const row = el('div', 'line');
+
+    const head = el('div', 'line-head');
+    head.append(el('span', 'line-no', 'L' + (ln.index + 1)));
+    const beats = el('div', 'beats');
+    const target = ln.target_syllables || 0, actual = fit.actual_syllables ?? 0;
+    for (let i = 0; i < Math.max(target, actual); i++) {
+      let cls = 'beat';
+      if (i >= target) cls += ' extra';
+      else if (i >= actual) cls += ' short';
+      else if ((ln.strong_positions || []).includes(i)) cls += ' strong';
+      beats.append(el('span', cls));
+    }
+    head.append(beats);
+    if (ln.rhyme_group) head.append(el('span', 'rhyme', ln.rhyme_group));
+    const ok = (fit.fit ?? 0) >= 0.75;
+    head.append(el('span', 'count ' + (ok ? 'good' : 'bad'), `${actual}/${target}`));
+    row.append(head);
+
+    row.append(el('div', 'source-line', ln.original));
+    const input = el('input');
+    input.value = ln.adapted || '';
+    input.dataset.index = ln.index;
+    input.oninput = debounce(async () => {
+      const s = await api('/prosody/syllables', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: input.value, lang })
+      });
+      const c = head.querySelector('.count');
+      c.textContent = `${s.syllables}/${target}`;
+      c.className = 'count ' + (Math.abs(s.syllables - target) <= 1 ? 'good' : 'bad');
+    }, 250);
+    row.append(input);
+    if (fit.issues && fit.issues.length) row.append(el('div', 'issues', fit.issues.join(' · ')));
+    wrap.append(row);
+  });
+  card.append(wrap);
+
+  if (!render.approved) {
+    const btn = el('button', 'primary', `Approve ${lang} and render`);
+    btn.onclick = async () => {
+      btn.disabled = true; btn.textContent = 'Approving…';
+      const lines = [...card.querySelectorAll('.line input')].map(i => i.value);
+      await api(`/jobs/${job.id}/renders/${lang}/approve`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ lines })
+      });
+      openJob(job.id);
+    };
+    card.append(btn);
+    card.append(el('span', 'muted', '  Edits are re-scored on approval.'));
+  }
+  return card;
+}
+
+function debounce(fn, ms) { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; }
+function setText(id, t) { document.getElementById(id).textContent = t; }
+
+boot().catch(e => setText('tag', 'API unreachable: ' + e.message));
+</script>
+</body>
+</html>
