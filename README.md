@@ -308,6 +308,9 @@ that first song tells you whether the catalogue-wide version is viable.
 
 ## Licensing
 
+The code is MIT — see [LICENSE](LICENSE). It does not cover the music, which is
+what the rest of this section is about.
+
 Built on the assumption that you own the recordings and the publishing. If you
 run this on material you don't own, a translated lyric is a derivative work and
 needs the publisher's licence.
