@@ -1,7 +1,5 @@
 # songloc
 
-[![tests](https://github.com/peratov/songloc/actions/workflows/ci.yml/badge.svg)](https://github.com/peratov/songloc/actions/workflows/ci.yml)
-
 A pipeline for localising your own recordings into other languages: stems →
 timed lyrics → singable adaptation → new lead vocal → mix.
 
