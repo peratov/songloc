@@ -1,0 +1,44 @@
+name: tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      # Not pip-installable. The audio tests synthesise a tone with ffmpeg and
+      # the pipeline shells out to ffprobe, so the suite needs both on PATH.
+      - name: Install ffmpeg
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends ffmpeg
+          ffmpeg -version | head -1
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt pytest
+
+      - name: Run tests
+        run: python -m pytest tests/ -q
+
+      # The suite writes to a temp dir (tests/conftest.py). If a change ever
+      # regresses that, data/ picks up a songloc.db and job artifacts.
+      - name: Check the suite left data/ clean
+        run: |
+          leaked="$(find data -mindepth 1 ! -name .gitkeep)"
+          if [ -n "$leaked" ]; then
+            echo "::error::tests wrote into data/:"; echo "$leaked"; exit 1
+          fi
+          echo "data/ clean"
