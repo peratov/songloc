@@ -129,8 +129,9 @@ def test_provider_descriptions_are_serialisable():
 
 # -- pipeline --------------------------------------------------------------
 
-def test_full_run_stops_at_review_then_completes(tone_file, monkeypatch, tmp_path):
-    monkeypatch.setenv("SONGLOC_DATA_DIR", str(tmp_path))
+def test_full_run_stops_at_review_then_completes(tone_file):
+    # Data dir is redirected to a temp path in conftest.py -- it has to happen
+    # before app.config is imported, which is earlier than any test body.
     from fastapi.testclient import TestClient
     from app.main import app
 
@@ -172,8 +173,7 @@ def test_full_run_stops_at_review_then_completes(tone_file, monkeypatch, tmp_pat
     assert any(f.endswith("master.wav") for f in files)
 
 
-def test_review_can_be_disabled(tone_file, monkeypatch, tmp_path):
-    monkeypatch.setenv("SONGLOC_DATA_DIR", str(tmp_path))
+def test_review_can_be_disabled(tone_file):
     from fastapi.testclient import TestClient
     from app.main import app
 
